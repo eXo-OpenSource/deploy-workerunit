@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"container/ring"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -59,12 +60,32 @@ func (server *MTAServer) Start() error {
 
 	server.Process.Stderr = os.Stderr
 
-	server.Process.Start()
-	return nil
+	return server.Process.Start()
 }
 
 func (server *MTAServer) Stop() error {
+	if server.Process == nil || server.Process.Process == nil {
+		return errors.New("Process not started")
+	}
+
 	return server.Process.Process.Signal(os.Interrupt)
+}
+
+func (server *MTAServer) Restart() error {
+	// Send stop signal
+	err := server.Stop()
+	if err != nil {
+		return err
+	}
+
+	// Wait for the server to stop
+	err = server.Process.Wait()
+	if err != nil {
+		return err
+	}
+
+	// Start server
+	return server.Start()
 }
 
 func (server *MTAServer) ExecCommand(command string) error {

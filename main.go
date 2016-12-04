@@ -8,7 +8,7 @@ import (
 func main() {
 	// Integrity checks
 	if os.Getenv("API_SECRET") == "" {
-		fmt.Fprintf(os.Stderr, "API_SECRET environment variable not defined")
+		fmt.Fprintf(os.Stderr, "API_SECRET environment variable not defined\n")
 		return
 	}
 

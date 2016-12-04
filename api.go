@@ -62,6 +62,16 @@ func (api *Api) BindRoutes() {
 		api.SendStatusError(&res, err)
 	})
 
+	http.HandleFunc("/restart", func(res http.ResponseWriter, req *http.Request) {
+		if !api.CheckAPISecret(req) {
+			api.SendStatusMessage(&res, "Wrong API secret")
+			return
+		}
+		err := api.MTAServer.Restart()
+
+		api.SendStatusError(&res, err)
+	})
+
 	http.HandleFunc("/output", func(res http.ResponseWriter, req *http.Request) {
 		if !api.CheckAPISecret(req) {
 			api.SendStatusMessage(&res, "Wrong API secret")
