@@ -25,11 +25,17 @@ func NewMTAServer(path string) *MTAServer {
 	server := new(MTAServer)
 	server.Path = path
 	server.OutputBuffer = ring.New(5000)
+	server.Process = nil
 
 	return server
 }
 
 func (server *MTAServer) Start() error {
+	// Don't start processes twice
+	if server.Process != nil && server.Process.ProcessState != nil && server.Process.ProcessState.Exited() == false {
+		return errors.New("Process is already running")
+	}
+
 	// Spawn process
 	server.Process = exec.Command(server.Path, "-n", "-t", "-u")
 
@@ -68,7 +74,8 @@ func (server *MTAServer) Stop() error {
 		return errors.New("Process not started")
 	}
 
-	return server.Process.Process.Signal(os.Interrupt)
+	err := server.Process.Process.Signal(os.Interrupt)
+	return err
 }
 
 func (server *MTAServer) Restart() error {

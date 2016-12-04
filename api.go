@@ -37,7 +37,7 @@ func (api *Api) BindRoutes() {
 		- /start : Starts the MTA server
 		- /stop : Stops the MTA server
 		- /restart : Restarts the MTA server (waits until stopped and starts then)
-		- /log : Retrieves a the last n lines of the standard output (uses a ring buffer internally)
+		- /logs : Retrieves a the last n lines of the standard output (uses a ring buffer internally)
 		- /command : Execute a command on the server's console
 		`)
 	})
@@ -72,7 +72,7 @@ func (api *Api) BindRoutes() {
 		api.SendStatusError(&res, err)
 	})
 
-	http.HandleFunc("/output", func(res http.ResponseWriter, req *http.Request) {
+	http.HandleFunc("/logs", func(res http.ResponseWriter, req *http.Request) {
 		if !api.CheckAPISecret(req) {
 			api.SendStatusMessage(&res, "Wrong API secret")
 			return
