@@ -2,10 +2,12 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
+	"os"
 )
+
+var apiSecret string
 
 type Api struct {
 	MTAServer *MTAServer
@@ -18,6 +20,9 @@ func NewApi(mtaServer *MTAServer) *Api {
 	// Bind routes
 	api.BindRoutes()
 
+	// Get API secret
+	apiSecret = os.Getenv("API_SECRET")
+
 	return api
 }
 
@@ -27,37 +32,62 @@ func (api *Api) Listen() {
 
 func (api *Api) BindRoutes() {
 	http.HandleFunc("/", func(res http.ResponseWriter, req *http.Request) {
-		fmt.Fprintf(res, "This is the API manuel (TODO)!")
+		fmt.Fprintf(res, `
+		Help:
+		- /start : Starts the MTA server
+		- /stop : Stops the MTA server
+		- /restart : Restarts the MTA server (waits until stopped and starts then)
+		- /log : Retrieves a the last n lines of the standard output (uses a ring buffer internally)
+		- /command : Execute a command on the server's console
+		`)
 	})
 
 	http.HandleFunc("/start", func(res http.ResponseWriter, req *http.Request) {
+		if !api.CheckAPISecret(req) {
+			api.SendStatusMessage(&res, "Wrong API secret")
+			return
+		}
 		err := api.MTAServer.Start()
 
-		api.SendErrorOrOkMessage(&res, err)
+		api.SendStatusError(&res, err)
 	})
 
 	http.HandleFunc("/stop", func(res http.ResponseWriter, req *http.Request) {
+		if !api.CheckAPISecret(req) {
+			api.SendStatusMessage(&res, "Wrong API secret")
+			return
+		}
 		err := api.MTAServer.Stop()
 
-		api.SendErrorOrOkMessage(&res, err)
+		api.SendStatusError(&res, err)
 	})
 
 	http.HandleFunc("/output", func(res http.ResponseWriter, req *http.Request) {
+		if !api.CheckAPISecret(req) {
+			api.SendStatusMessage(&res, "Wrong API secret")
+			return
+		}
 		output := api.MTAServer.TailBuffer()
 
 		json.NewEncoder(res).Encode(ConsoleOutputMessage{ApiMessage: ApiMessage{Status: "OK"}, Output: output})
 	})
 
 	http.HandleFunc("/command", func(res http.ResponseWriter, req *http.Request) {
+		if !api.CheckAPISecret(req) {
+			api.SendStatusMessage(&res, "Wrong API secret")
+			return
+		}
+
+		// Parse POST parameters
 		req.ParseForm()
 
 		if req.Method != "POST" {
-			api.SendErrorOrOkMessage(&res, errors.New("Bad method"))
+			api.SendStatusMessage(&res, "Bad method")
 		} else {
 			command := req.Form.Get("command")
 			err := api.MTAServer.ExecCommand(command)
 
-			api.SendErrorOrOkMessage(&res, err)
+			api.SendStatusError(&res, err)
 		}
 	})
 }
@@ -66,10 +96,18 @@ func (api *Api) SendOkMessage(res *http.ResponseWriter) {
 	json.NewEncoder(*res).Encode(ApiMessage{Status: "OK"})
 }
 
-func (api *Api) SendErrorOrOkMessage(res *http.ResponseWriter, err error) {
+func (api *Api) SendStatusMessage(res *http.ResponseWriter, message string) {
+	json.NewEncoder(*res).Encode(ApiMessage{Status: message})
+}
+
+func (api *Api) SendStatusError(res *http.ResponseWriter, err error) {
 	if err != nil {
 		json.NewEncoder(*res).Encode(ApiMessage{Status: err.Error()})
 	} else {
 		json.NewEncoder(*res).Encode(ApiMessage{Status: "OK"})
 	}
+}
+
+func (api *Api) CheckAPISecret(req *http.Request) bool {
+	return req.Header.Get("API_SECRET") == apiSecret
 }
