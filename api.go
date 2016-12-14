@@ -58,7 +58,7 @@ func (api *Api) BindRoutes() {
 			api.SendStatusMessage(&res, "Wrong API secret")
 			return
 		}
-		err := api.MTAServer.Stop()
+		err := api.MTAServer.Stop(false)
 
 		api.SendStatusError(&res, err)
 	})

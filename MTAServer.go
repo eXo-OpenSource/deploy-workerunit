@@ -69,24 +69,27 @@ func (server *MTAServer) Start() error {
 	return server.Process.Start()
 }
 
-func (server *MTAServer) Stop() error {
+func (server *MTAServer) Stop(wait bool) error {
 	if server.Process == nil || server.Process.Process == nil {
 		return errors.New("Process not started")
 	}
 
 	err := server.Process.Process.Signal(os.Interrupt)
-	return err
-}
-
-func (server *MTAServer) Restart() error {
-	// Send stop signal
-	err := server.Stop()
 	if err != nil {
 		return err
 	}
 
 	// Wait for the server to stop
-	err = server.Process.Wait()
+	if wait {
+		return server.Process.Wait()
+	}
+
+	return nil
+}
+
+func (server *MTAServer) Restart() error {
+	// Send stop signal
+	err := server.Stop(true)
 	if err != nil {
 		return err
 	}
