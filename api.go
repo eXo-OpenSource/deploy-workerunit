@@ -38,7 +38,8 @@ func (api *Api) BindRoutes() {
 		- /stop : Stops the MTA server
 		- /restart : Restarts the MTA server (waits until stopped and starts then)
 		- /logs : Retrieves a the last n lines of the standard output (uses a ring buffer internally)
-		- /command : Execute a command on the server's console
+		- /command : Executes a command on the server's console
+		- /upload : Uploads a resource archive
 		`)
 	})
 
@@ -99,6 +100,42 @@ func (api *Api) BindRoutes() {
 
 			api.SendStatusError(&res, err)
 		}
+	})
+
+	http.HandleFunc("/upload", func(res http.ResponseWriter, req *http.Request) {
+		if !api.CheckAPISecret(req) {
+			api.SendStatusMessage(&res, "Wrong API secret")
+			return
+		}
+
+		// Parse multipart form (uploaded file)
+		req.ParseMultipartForm(150 * 1024 * 1024) // Max 150MiB
+
+		file, _, err := req.FormFile("file")
+		if err != nil {
+			api.SendStatusMessage(&res, "Invalid request")
+			return
+		}
+		defer file.Close()
+
+		// Open resource package writer
+		writer := NewResourcePackageWriter(&file, "./artifacts.tar.gz")
+
+		// Write archive
+		err = writer.Write()
+		if err != nil {
+			api.SendStatusMessage(&res, "Could not write archive: "+err.Error())
+			return
+		}
+
+		// Extract archive
+		err = writer.Extract("/var/lib/mtasa/mods/deathmatch/resources/")
+		if err != nil {
+			api.SendStatusMessage(&res, "Could not extract archive: "+err.Error())
+			return
+		}
+
+		api.SendOkMessage(&res)
 	})
 }
 
