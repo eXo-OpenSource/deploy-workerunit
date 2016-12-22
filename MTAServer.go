@@ -9,30 +9,38 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"time"
 )
 
 // MTAServer type represents an MTA Server process
 type MTAServer struct {
 	Path         string
 	Process      *exec.Cmd
+	Running      bool
 	Stdin        io.WriteCloser
 	Stdout       io.ReadCloser
 	OutputBuffer *ring.Ring
 }
 
 // NewMTAServer instantiates a new MTA server instance
-func NewMTAServer(path string) *MTAServer {
+func NewMTAServer(path string, watchdogEnabled bool) *MTAServer {
 	server := new(MTAServer)
 	server.Path = path
 	server.OutputBuffer = ring.New(5000)
 	server.Process = nil
+
+	// Start watchdog
+	if watchdogEnabled {
+		fmt.Println("Starting watchdog...")
+		go server.WatchProcess()
+	}
 
 	return server
 }
 
 func (server *MTAServer) Start() error {
 	// Don't start processes twice
-	if server.Process != nil && server.Process.ProcessState != nil && server.Process.ProcessState.Exited() == false {
+	if server.Process != nil && server.Process.ProcessState != nil && !server.Process.ProcessState.Exited() {
 		return errors.New("Process is already running")
 	}
 
@@ -65,8 +73,13 @@ func (server *MTAServer) Start() error {
 	}()
 
 	server.Process.Stderr = os.Stderr
+	server.Running = true
 
-	return server.Process.Start()
+	// Call Run in a goroutine
+	// Start doesn't work as it doesn't set the ProcessState correctly
+	go server.Process.Run()
+
+	return nil
 }
 
 func (server *MTAServer) Stop(wait bool) error {
@@ -74,6 +87,7 @@ func (server *MTAServer) Stop(wait bool) error {
 		return errors.New("Process not started")
 	}
 
+	server.Running = false
 	err := server.Process.Process.Signal(os.Interrupt)
 	if err != nil {
 		return err
@@ -120,4 +134,33 @@ func (server *MTAServer) TailBuffer() string {
 	})
 
 	return buffer.String()
+}
+
+func (server *MTAServer) WatchProcess() {
+	for {
+		// Wait a few seconds
+		time.Sleep(5 * time.Second)
+
+		// Don't start a server if none is running
+		if !server.Running || server.Process == nil || server.Process.ProcessState == nil {
+			continue
+		}
+
+		// Check if the process crashed
+		if server.Process.ProcessState.Exited() || !server.Process.ProcessState.Success() {
+			fmt.Println("\nA crash was detected. Attempting a restart...\n")
+
+			// Call stop to ensure everything is cleaned up correctly
+			// but ignore errors
+			server.Stop(true)
+
+			// A crash/unexpected exit has been detected, so restart now
+			err := server.Start()
+
+			// But don't repeat if startup failed
+			if err != nil {
+				break
+			}
+		}
+	}
 }

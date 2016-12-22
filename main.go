@@ -12,6 +12,12 @@ func main() {
 		return
 	}
 
+	// Get watchdog enabled state (defaults to 'disabled')
+	watchdogEnabled := false
+	if os.Getenv("WATCHDOG") != "" {
+		watchdogEnabled = true
+	}
+
 	// Open config for patching
 	fmt.Println("Patching config...")
 	patcher, err := NewMTAConfigPatcher("/var/lib/mtasa/mods/deathmatch/mtaserver.conf")
@@ -27,7 +33,7 @@ func main() {
 
 	// Create MTA server instance
 	fmt.Println("Creating MTAServer...")
-	server := NewMTAServer("/var/lib/mtasa/mta-server64")
+	server := NewMTAServer("/var/lib/mtasa/mta-server64", watchdogEnabled)
 
 	// Create api
 	fmt.Println("Creating API...")
