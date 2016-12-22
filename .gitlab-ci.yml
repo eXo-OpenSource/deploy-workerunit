@@ -1,0 +1,14 @@
+before_script:
+  - sudo docker info
+  - sudo apt-get -t jessie-backports install golang-1.6
+
+stages:
+  - build
+
+build_app_job:
+  stage: build
+  script:
+    - go build -o ./workerserver *.go
+  artifacts:
+    paths:
+      - workerserver
