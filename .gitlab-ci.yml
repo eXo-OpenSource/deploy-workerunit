@@ -5,6 +5,7 @@ before_script:
 stages:
   - setup_env
   - build
+  - deploy
 
 setup_go_env_job:
   stage: setup_env
@@ -22,3 +23,9 @@ build_app_job:
   artifacts:
     paths:
       - workerserver
+
+deploy_app_job:
+  stage: deploy
+  script:
+    - sudo mkdir -p /builddata
+    - sudo cp workerserver /builddata/workerserver
