@@ -17,6 +17,7 @@ build_app_job:
   stage: build
   script:
     #- go get -v ./...
+    - export GOPATH=$HOME/gopath # TODO: Fix this
     - go build -o ./workerserver *.go
   artifacts:
     paths:
