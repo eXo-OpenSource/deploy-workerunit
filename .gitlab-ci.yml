@@ -1,6 +1,6 @@
 before_script:
   - sudo docker info
-  - sudo apt-get -t jessie-backports install golang-1.6
+  - sudo apt-get -t jessie-backports install -y golang-1.6
 
 stages:
   - build
