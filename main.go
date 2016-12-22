@@ -35,6 +35,11 @@ func main() {
 	fmt.Println("Creating MTAServer...")
 	server := NewMTAServer("/var/lib/mtasa/mta-server64", watchdogEnabled)
 
+	// Should we start the server immediately
+	if os.Getenv("START_MTA") != "" {
+		server.Start()
+	}
+
 	// Create api
 	fmt.Println("Creating API...")
 	api := NewApi(server)
