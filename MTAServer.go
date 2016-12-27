@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"sync"
 	"time"
 )
 
@@ -20,6 +21,7 @@ type MTAServer struct {
 	Stdin        io.WriteCloser
 	Stdout       io.ReadCloser
 	OutputBuffer *ring.Ring
+	WaitCond     sync.Cond
 }
 
 // NewMTAServer instantiates a new MTA server instance
@@ -77,7 +79,17 @@ func (server *MTAServer) Start() error {
 
 	// Call Run in a goroutine
 	// Start doesn't work as it doesn't set the ProcessState correctly
-	go server.Process.Run()
+	go func() {
+		// Process.Run below calls Wait internally
+		// However, only 1 wait can be used at the same time
+		// so if we want 'Restart' to work correctly,
+		// we can't use 'Wait' in 'Stop'
+		// Our solution is to signal a condition variable on stop here
+		server.Process.Run()
+
+		// Broadcast signal to condition variables now
+		server.WaitCond.Broadcast()
+	}()
 
 	return nil
 }
@@ -95,7 +107,8 @@ func (server *MTAServer) Stop(wait bool) error {
 
 	// Wait for the server to stop
 	if wait {
-		return server.Process.Wait()
+		// This condition variable is signalled when the server has stopped
+		server.WaitCond.Wait()
 	}
 
 	return nil
