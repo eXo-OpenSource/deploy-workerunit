@@ -29,7 +29,6 @@ func main() {
 	patcher.Patch("serverport", os.Getenv("MTA_GAME_PORT"))
 	patcher.Patch("httpport", os.Getenv("MTA_HTTP_PORT"))
 	patcher.Patch("servername", os.Getenv("MTA_SERVER_NAME"))
-	patcher.Patch("serverip", os.Getenv("MTA_SERVER_IP"))
 	patcher.Save()
 
 	// Create MTA server instance
