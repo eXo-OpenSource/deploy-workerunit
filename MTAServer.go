@@ -21,7 +21,7 @@ type MTAServer struct {
 	Stdin        io.WriteCloser
 	Stdout       io.ReadCloser
 	OutputBuffer *ring.Ring
-	WaitCond     sync.Cond
+	WaitMutex    sync.Mutex
 }
 
 // NewMTAServer instantiates a new MTA server instance
@@ -84,11 +84,11 @@ func (server *MTAServer) Start() error {
 		// However, only 1 wait can be used at the same time
 		// so if we want 'Restart' to work correctly,
 		// we can't use 'Wait' in 'Stop'
-		// Our solution is to signal a condition variable on stop here
-		server.Process.Run()
+		// Our solution is to abuse a mutex as a condition variable
+		server.WaitMutex.Lock()
+		defer server.WaitMutex.Unlock()
 
-		// Broadcast signal to condition variables now
-		server.WaitCond.Broadcast()
+		server.Process.Run()
 	}()
 
 	return nil
@@ -107,8 +107,9 @@ func (server *MTAServer) Stop(wait bool) error {
 
 	// Wait for the server to stop
 	if wait {
-		// This condition variable is signalled when the server has stopped
-		server.WaitCond.Wait()
+		// This mutex is signalled when the server has stopped
+		server.WaitMutex.Lock()
+		server.WaitMutex.Unlock()
 	}
 
 	return nil
