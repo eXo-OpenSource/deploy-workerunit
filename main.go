@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
@@ -43,6 +45,15 @@ func main() {
 	// Create api
 	fmt.Println("Creating API...")
 	api := NewApi(server)
+
+	// Handle SIGTERM
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGTERM)
+	go func() {
+		for _ = range c {
+			server.Stop(true)
+		}
+	}()
 
 	// Listen for requests on the main goroutine
 	fmt.Println("Waiting for commands...")
