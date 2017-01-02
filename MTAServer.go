@@ -95,7 +95,7 @@ func (server *MTAServer) Start() error {
 }
 
 func (server *MTAServer) Stop(wait bool) error {
-	if server.Process == nil || server.Process.Process == nil {
+	if server.Process == nil || server.Process.Process == nil || server.Running == false {
 		return errors.New("Process not started")
 	}
 

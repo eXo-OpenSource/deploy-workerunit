@@ -52,6 +52,7 @@ func main() {
 	go func() {
 		for _ = range c {
 			server.Stop(true)
+			os.Exit(0)
 		}
 	}()
 
