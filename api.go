@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -96,8 +97,13 @@ func (api *Api) BindRoutes() {
 			api.SendStatusMessage(&res, "Bad method")
 		} else {
 			command := req.Form.Get("command")
-			err := api.MTAServer.ExecCommand(command)
 
+			var err error
+			if command != "" {
+				err = api.MTAServer.ExecCommand(command)
+			} else {
+				err = errors.New("Empty command")
+			}
 			api.SendStatusError(&res, err)
 		}
 	})
