@@ -42,7 +42,7 @@ func NewMTAServer(path string, watchdogEnabled bool) *MTAServer {
 
 func (server *MTAServer) Start() error {
 	// Don't start processes twice
-	if server.Process != nil && server.Process.ProcessState != nil && !server.Process.ProcessState.Exited() {
+	if server.Process != nil && server.Process.Process != nil && server.Process.ProcessState != nil && !server.Process.ProcessState.Exited() {
 		return errors.New("Process is already running")
 	}
 
