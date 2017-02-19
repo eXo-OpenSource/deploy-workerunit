@@ -39,6 +39,7 @@ func (api *Api) BindRoutes() {
 		- /stop : Stops the MTA server
 		- /restart : Restarts the MTA server (waits until stopped and starts then)
 		- /logs : Retrieves a the last n lines of the standard output (uses a ring buffer internally)
+		- /status: Retrieves the status of the MTA server process
 		- /command : Executes a command on the server's console
 		- /upload : Uploads a resource archive
 		`)
@@ -82,6 +83,15 @@ func (api *Api) BindRoutes() {
 		output := api.MTAServer.TailBuffer()
 
 		json.NewEncoder(res).Encode(ConsoleOutputMessage{ApiMessage: ApiMessage{Status: "OK"}, Output: output})
+	})
+
+	http.HandleFunc("/status", func(res http.ResponseWriter, req *http.Request) {
+		if !api.CheckAPISecret(req) {
+			api.SendStatusMessage(&res, "Wrong API secret")
+			return
+		}
+
+		json.NewEncoder(res).Encode(*api.MTAServer.Status())
 	})
 
 	http.HandleFunc("/command", func(res http.ResponseWriter, req *http.Request) {

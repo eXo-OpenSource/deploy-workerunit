@@ -178,3 +178,15 @@ func (server *MTAServer) WatchProcess() {
 		}
 	}
 }
+
+func (server *MTAServer) Status() *MTAStatusInfoMessage {
+	message := MTAStatusInfoMessage{Running: server.Running}
+
+	message.Process = fmt.Sprintf("%x", server.Process)
+	if server.Process != nil {
+		message.ProcessProcess = fmt.Sprintf("%x", server.Process.Process)
+		message.ProcessStatus = server.Process.ProcessState.String()
+	}
+
+	return &message
+}
